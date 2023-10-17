@@ -1,0 +1,101 @@
+import sys
+import traceback
+
+from PyQt5.QtWidgets import QApplication, QMainWindow, QTableWidgetItem, QMessageBox
+import sqlite3
+from PyQt5 import uic
+
+
+class MyWidget(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        uic.loadUi('untitled1.ui', self)
+        self.params = {"Название": "Nazv", "Дата выдачи": "DateOfIssue", "Дата возврата": "DataSdachi"}
+        self.comboBox_2.addItems(list(self.params.keys()))
+        self.con = sqlite3.connect("Libraru.db")
+        self.pushButton_6.clicked.connect(self.select)
+        self.pushButton_7.clicked.connect(self.delete)
+        self.pushButton_5.clicked.connect(self.Add)
+        self.pushButton_8.clicked.connect(self.Update)
+        self.pushButton_9.clicked.connect(self.searchconference)
+
+    def select(self):
+        Nazv = self.lineEdit_2.text()
+        req = "SELECT * FROM Books "
+        if Nazv:
+            req = "SELECT * FROM Books WHERE Nazv = '{}'".format(Nazv)
+
+        cur = self.con.cursor()
+        result = cur.execute(req).fetchall()
+        self.tableWidget_2.setRowCount(len(result))
+        self.tableWidget_2.setColumnCount(len(result[0]))
+        self.tableWidget_2.setHorizontalHeaderLabels([i[0] for i in cur.description])
+        print(cur.description)
+        for i, elem in enumerate(result):
+            for j, val in enumerate(elem):
+                self.tableWidget_2.setItem(i, j, QTableWidgetItem(str(val)))
+
+    def delete(self):
+        try:
+            row = self.tableWidget_2.currentRow()
+            id = self.tableWidget_2.item(row,0).text()
+            cur = self.con.cursor()
+            cur.execute(f"DELETE FROM Books WHERE ID_Books={id}")
+            self.con.commit()
+            QMessageBox.information(self, "Удаление записи","Запись успешно удалена из базы данных")
+        except Exception as e:
+            print(e)
+            traceback.print_exc()
+
+    def searchconference(self):
+        text = self.lineEdit_2.text()
+        cur = self.con.cursor()
+        search = self.comboBox_2.toPlainText()
+        if len(search) > 0:
+            result = cur.execute(f"""SELECT ID_Books as "Код Книги", Nazv as "Название книги", DateOfIssue as "Дата Выдачи", DataSdachi as "Дата Сдачи" FROM Books WHERE {search} LIKE '%{text}%'""").fetchall()
+        else:
+            result = cur.execute(f"""SELECT ID_Books as "Код Книги", Nazv as "Название книги", DateOfIssue as "Дата Выдачи", DataSdachi as "Дата Сдачи" FROM Books""").fetchall()
+        self.tableWidget_2.setRowCount(len(result))
+        self.tableWidget_2.setHorizontalHeaderLabels([description[0] for description in cur.description])
+        for i, elem in enumerate(result):
+            for j, val in enumerate(elem):
+                self.tableWidget_2.setItem(i, j, QTableWidgetItem(str(val)))
+
+    def Add(self):
+        try:
+            code = self.lineEdit.text()
+            nazvan = self.lineEdit_3.text()
+            datavid = self.lineEdit_4.text()
+            datasdach = self.lineEdit_5.text()
+            idreader = self.lineEdit_6.text()
+            cur = self.con.cursor()
+            cur.execute(f"INSERT INTO Books Values ({code}, '{nazvan}', '{datavid}', '{datasdach}', {idreader})")
+            self.con.commit()
+            QMessageBox.information(self, "Добавления данных записи","Запись успешно добавлена из базы данных")
+        except Exception as e:
+            print(e)
+            traceback.print_exc()
+
+    def Update(self):
+        try:
+            row = self.tableWidget_2.currentRow()
+            code = self.lineEdit.text()
+            nazvan = self.lineEdit_3.text()
+            datavid = self.lineEdit_4.text()
+            datasdach = self.lineEdit_5.text()
+            idreader = self.lineEdit_6.text()
+            cur = self.con.cursor()
+            id = self.tableWidget_2.item(row, 0).text()
+            cur.execute(f"UPDATE Books SET Nazv = '{nazvan}', DateOfIssue = '{datavid}', DataSdachi = '{datasdach}', ID_Reader = {idreader} WHERE ID_Books={id}")
+            self.con.commit()
+            QMessageBox.information(self, "Редактирование данных записи","Запись успешно измененина из базы данных")
+        except Exception as e:
+            print(e)
+            traceback.print_exc()
+
+
+if __name__ == '__main__':
+    app = QApplication(sys.argv)
+    form = MyWidget()
+    form.show()
+    sys.exit(app.exec())
